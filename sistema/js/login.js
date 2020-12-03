@@ -2,7 +2,7 @@ window.onload = init;
 
 function init(){
     if(!localStorage.getItem("token")){
-        document.querySelector('.btn-primary').addEventListener('click',login);
+        document.getElementById('btn-info').addEventListener('click',login);
     }
     else{
         window.location.href = "dashboard.html"

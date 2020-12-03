@@ -2,40 +2,54 @@ window.onload = init;
 var headers = {};
 var url = "http://localhost:3000";
 
-function init(){
-    if(localStorage.getItem("token")){
+function init() {
+    if (localStorage.getItem("token")) {
         headers = {
-            headers:{
-                'Authorization':"bearer "+localStorage.getItem("token")
+            headers: {
+                'Authorization': "bearer " + localStorage.getItem("token")
             }
         }
         loadEmployees();
-        document.getElementById("btn-registrar").addEventListener('click',registrar);
-        document.getElementById("btn-eliminar").addEventListener('click',eliminar);
+        document.getElementById("btn-registrar").addEventListener('click', registrar);
+        document.getElementById("btn-eliminar").addEventListener('click', eliminar);
     }
-    else{
+    else {
         window.location.href = "index.html";
     }
 }
 
-function loadEmployees(){
-    axios.get(url + "/empleados",headers)
-    .then(function(res){
-        displayEmployees(res.data.message);
-    }).catch(function(err){
-        console.log(err);
-    })
+function loadEmployees() {
+    axios.get(url + "/empleados", headers)
+        .then(function (res) {
+            displayEmployees(res.data.message);
+        }).catch(function (err) {
+            console.log(err);
+        })
 }
 
 
-function displayEmployees(empleados){
-    var body = document.querySelector("body");
-    for(var i = 0; i < empleados.length; i++){
-        body.innerHTML += `<h3>${empleados[i].nombre}</h3>`
+function displayEmployees(empleados) {
+    $("#body_table_empleados").html("");
+    $("#table_empleados").DataTable().clear();
+    $("#table_empleados").DataTable().destroy();
+
+    for (var i = 0; i < empleados.length; i++) {
+        $("#body_table_empleados").append(
+            '<tr>' +
+            '<td>' + empleados[i].idEmpleado + '</td>' +
+            '<td>' + empleados[i].nombre + '</td>' +
+            '<td>' + empleados[i].apellidoPaterno + '</td>' +
+            '<td>' + empleados[i].apellidoMaterno + '</td>' +
+            '<td style="width: 200px !important"><button class="btn btn-warning" style="width:80px !important;" onclick="editar_empleado(' + empleados[i].idEmpleado + ')">Editar</button>' +
+            '<button class="btn btn-danger" style="width:80px !important;float: right;" onclick="eliminar(' + empleados[i].idEmpleado + ')">Eliminar</button></td>' +
+            '</tr>'
+        )
     }
+    $('#table_empleados').DataTable();
+
 }
 
-function registrar(){
+function registrar() {
     var nombre = document.getElementById('input-nombre').value;
     var apellidoPaterno = document.getElementById('input-apellidoP').value;
     var apellidoMaterno = document.getElementById('input-apellidoM').value;
@@ -53,68 +67,90 @@ function registrar(){
             correo: correo,
             direccion: direccion
         },
-        headers:{
-            'Authorization':"bearer "+localStorage.getItem("token")
+        headers: {
+            'Authorization': "bearer " + localStorage.getItem("token")
         }
-    }).then(function(res){
+    }).then(function (res) {
         console.log(res);
-        alert("Registro exitoso");
-        window.location.href = "dashboard.html";
-    }).catch(function(err){
+        limpiar_registro();
+        Swal.fire({
+            title: 'Registrado con éxito!',
+            icon:'success',
+            showConfirmButton: false,
+            timer: 1500,
+        });
+        loadEmployees();
+    }).catch(function (err) {
         console.log(err);
     })
 }
 
-function eliminar(){
-    var idEmpleado = document.getElementById('input-id').value;
-    axios({
-        method:'delete',
-        url: 'http://localhost:3000/empleados/eliminar',
-        data: {
-            id: idEmpleado
-        },
-        headers:{
-            'Authorization':"bearer "+localStorage.getItem("token")
-        }
-    }).then(function(res){
-        console.log(res);
-        alert("Eliminado Exitosamente");
-        window.location.href = "dashboard.html";
-    }).catch(function(err){
-        alert(err.message);
+function eliminar(id) {
+    Swal.fire({
+        title: 'Estás seguro que deseas eliminar este empleado???',
+        text: 'No podrás revertir esta acción',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: `Emilinar`,
+        denyButtonText: `Cancelar`,
+    }).then((result) => {
+        if (result.isConfirmed) {
+            axios({
+                method: 'delete',
+                url: 'http://localhost:3000/empleados/eliminar',
+                data: {
+                    id: id
+                },
+                headers: {
+                    'Authorization': "bearer " + localStorage.getItem("token")
+                }
+            }).then(function (res) {
+                console.log(res);
+                Swal.fire({
+                    title: 'Elimindado con éxito!',
+                    icon: 'success',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+                loadEmployees();
+               
+            }).catch(function (err) {
+                alert(err.message);
+            })
+            
+        } 
     })
+    
 }
-function buscar(){
+function buscar() {
     var nombre = document.getElementById('input-buscar').value;
     axios({
-        method:'post',
+        method: 'post',
         url: 'http://localhost:3000/empleados/buscar',
         data: {
             nombre: nombre
         },
-        headers:{
-            'Authorization':"bearer "+localStorage.getItem("token")
+        headers: {
+            'Authorization': "bearer " + localStorage.getItem("token")
         }
-    }).then(function(res){
+    }).then(function (res) {
         console.log(res);
         displayEmployees(res.data.message);
-    }).catch(function(err){
+    }).catch(function (err) {
         alert(err.message);
     })
 }
-function modificar(){
-    var id = document.getElementById('input-buscarid').value;
-    if(document.getElementById('input-idE') && document.getElementById('input-idE').value!=null){
-        console.log("hola");
-        var idE = document.getElementById('input-idE').value;
-        var nom = document.getElementById('input-nom').value;
-        var apellp = document.getElementById('input-apellp').value;
-        var apellm = document.getElementById('input-apellm').value;
-        var corr = document.getElementById('input-corr').value;
-        var tel = document.getElementById('input-tel').value;
-        var dir = document.getElementById('input-dir').value;
+function modificar() {
+    if (document.getElementById('input_idE') && document.getElementById('input_idE').value != null) {
+        var idE = document.getElementById('input_idE').value;
+        var nom = document.getElementById('input_nom').value;
+        var apellp = document.getElementById('input_apellp').value;
+        var apellm = document.getElementById('input_apellm').value;
+        var corr = document.getElementById('input_corr').value;
+        var tel = document.getElementById('input_tel').value;
+        var dir = document.getElementById('input_dir').value;
         axios({
-            method:'post',
+            method: 'post',
             url: 'http://localhost:3000/empleados/modificar',
             data: {
                 id: idE,
@@ -125,72 +161,76 @@ function modificar(){
                 correo: corr,
                 direccion: dir
             },
-            headers:{
-                'Authorization':"bearer "+localStorage.getItem("token")
+            headers: {
+                'Authorization': "bearer " + localStorage.getItem("token")
             }
-        }).then(function(res){
-            console.log(res.data.message);
-            alert("Modificado exitosamente");
-            document.getElementById('input-idE').value=null;
-            document.getElementById('input-nom').value="";
-            document.getElementById('input-apellp').value="";
-            document.getElementById('input-apellm').value="";
-            document.getElementById('input-corr').value="";
-            document.getElementById('input-tel').value="";
-            document.getElementById('input-dir').value="";
-        }).catch(function(err){
+        }).then(function (res) {
+            $("#modal_editar_empleado").modal('hide');
+            Swal.fire({
+                title: 'Modificado con éxito!',
+                icon: 'success',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            document.getElementById('input_idE').value = null;
+            document.getElementById('input_nom').value = "";
+            document.getElementById('input_apellp').value = "";
+            document.getElementById('input_apellm').value = "";
+            document.getElementById('input_corr').value = "";
+            document.getElementById('input_tel').value = "";
+            document.getElementById('input_dir').value = "";
+
+            loadEmployees();
+        }).catch(function (err) {
             alert(err.message);
         })
     }
-    else{
-        alert("Selecciona id de un empleado primero")
-    }
 }
-function buscarid(){
-    var id = document.getElementById('input-buscarid').value;
+function buscarid(id) {
     axios({
-        method:'post',
+        method: 'post',
         url: 'http://localhost:3000/empleados/buscarid',
         data: {
             id: id
         },
-        headers:{
-            'Authorization':"bearer "+localStorage.getItem("token")
+        headers: {
+            'Authorization': "bearer " + localStorage.getItem("token")
         }
-    }).then(function(res){
+    }).then(function (res) {
         console.log(res.data.message);
         inputs(res.data.message);
-    }).catch(function(err){
+    }).catch(function (err) {
         console.log(err);
     })
 }
-function inputs(empleado){
-    var body = document.querySelector("body");
-    document.getElementById('input-buscarid').value=null;
-    if(document.getElementById('btn-modificar')){
-        document.getElementById('input-idE').value=empleado[0].idEmpleado;
-        document.getElementById('input-nom').value=empleado[0].nombre;
-        document.getElementById('input-apellp').value=empleado[0].apellidoPaterno;
-        document.getElementById('input-apellm').value=empleado[0].apellidoMaterno;
-        document.getElementById('input-corr').value=empleado[0].correo;
-        document.getElementById('input-tel').value=empleado[0].telefono;
-        document.getElementById('input-dir').value=empleado[0].direccion;
-    }
-    else{
-        body.innerHTML += `<form name="mod">`
-        console.log(empleado[0].idEmpleado);
-        body.innerHTML += `<input type=number id="input-idE" name="id" readonly=readonly value='${empleado[0].idEmpleado}'>`
-        body.innerHTML += `<input type=text id="input-nom" name="nombre" value='${empleado[0].nombre}'>`
-        body.innerHTML += `<input type=text id="input-apellp" name="apellidoP" value='${empleado[0].apellidoPaterno}'>`
-        body.innerHTML += `<input type=text id="input-apellm" name="apellidoM" value='${empleado[0].apellidoMaterno}'>`
-        body.innerHTML += `<input type=text id="input-corr" name="correo" value='${empleado[0].correo}'>`
-        body.innerHTML += `<input type=text id="input-dir" name="direccion" value='${empleado[0].direccion}'>`
-        body.innerHTML += `<input type=text id="input-tel" name="telefono" value='${empleado[0].telefono}'>`
-        body.innerHTML += `</form>`
-        body.innerHTML += `<button id="btn-modificar" onclick="modificar();">Modificar</button>`
-    }
+function inputs(empleado) {
+    console.log(empleado)
+    data = empleado[0];
+    $('#input_idE').val(data.idEmpleado);
+    $('#input_nom').val(data.nombre);
+    document.getElementById('input_apellp').value = data.apellidoPaterno;
+    document.getElementById('input_apellm').value = data.apellidoMaterno;
+    document.getElementById('input_corr').value = data.correo;
+    document.getElementById('input_tel').value = data.telefono;
+    document.getElementById('input_dir').value = data.direccion;
+
 }
-function cerrar(){
+function cerrar() {
     localStorage.removeItem("token");
-            window.location.href = "./login.html"
+    window.location.href = "./login.html"
+}
+
+function editar_empleado(id) {
+    buscarid(id);
+    $("#modal_editar_empleado").modal('show');
+
+}
+
+function limpiar_registro(){
+    document.getElementById('input-nombre').value="";
+    document.getElementById('input-apellidoP').value="";
+    document.getElementById('input-apellidoM').value="";
+    document.getElementById('input-telefono').value="";
+    document.getElementById('input-mail').value="";
+    document.getElementById('input-direccion').value="";
 }
